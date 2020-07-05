@@ -1,0 +1,53 @@
+FROM centos:8.2.2004
+ARG ANSIBLE_VERSION=2.9.4
+
+# Metadata Params
+LABEL maintainer="Adekoya Ade <adekoyadapo@gmail.com>"\
+      org.label-schema.url="https://github.com/adekoyadapo/iac-ansible/blob/master/README.md" \
+      org.label-schema.version=${ANSIBLE_VERSION} \
+      org.label-schema.vcs-url="https://github.com/adekoyadapo/iac-ansible.git" \
+      org.label-schema.docker.dockerfile="/Dockerfile" \
+      org.label-schema.description="Ansible in docker image for config management" \
+      org.label-schema.schema-version="1.0"
+
+# Environment and pip requirements
+ENV container=docker
+ENV pip_packages "ansible==${ANSIBLE_VERSION} pyvmomi==7.0 docker==4.2.2 docker-compose==1.26.2 boto3==1.14.16 boto==2.49.0 cryptography==2.9.2 ansible[azure] apache-libcloud==3.1.0"
+
+# Install systemd -- See https://hub.docker.com/_/centos/
+RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
+systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+
+# Install requirements.
+RUN yum -y install rpm centos-release \
+ && yum -y update \
+ && yum -y install \
+      epel-release \
+      initscripts \
+      sudo \
+      which \
+      hostname \
+      python3 \
+      openssl \
+      openssh \
+      openssh-clients \
+      python3-pip \
+      git \
+ && yum clean all
+
+# Install Ansible via Pip. Disable requiretty & Install Ansible inventory file.
+
+RUN pip3 install --user $pip_packages \
+    && sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/'  /etc/sudoers \
+    && mkdir -p /etc/ansible \
+    && echo -e '[local]\nlocalhost ansible_connection=local' > /etc/ansible/hosts
+
+VOLUME ["/sys/fs/cgroup"]
+CMD ["/usr/lib/systemd/systemd"]
