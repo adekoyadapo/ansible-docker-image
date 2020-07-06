@@ -1,0 +1,53 @@
+name: Docker Ansible Image CI
+on:
+  push:
+    branches: 
+      - dev
+    paths:
+    - 'Dockerfile**'
+  pull:
+    branches: 
+      - dev
+    paths:
+    - 'Dockerfile**'
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Get Tags for alpine
+      id: tags
+      run: |
+        ls -al
+        echo ::set-output name=ALPINE_TAG::$(cat ./build/Dockerfile-Alpine3 | grep FROM | cut -d ":" -f2)
+        echo ::set-output name=CENTOS_TAG::$(cat ./build/Dockerfile-Centos8 | grep FROM | cut -d ":" -f2)
+        echo ::set-output name=TAG_VERSION::$(echo ${GITHUB_SHA::8})
+    - name: Check outputs
+      run: |
+        echo ${{ steps.tags.outputs.ALPINE_TAG }}-${{ steps.tags.outputs.TAG_VERSION }}
+        echo ${{ steps.tags.outputs.CENTOS_TAG }}-${{ steps.tags.outputs.TAG_VERSION }}
+      
+    - uses: docker/build-push-action@v1
+    - name: alpine_build
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: adedapomola/ansible-iac
+        path: build
+        dockerfile: build/Dockerfile-Alpine3
+        tag_with_ref: true
+        tag_with_sha: true
+        tags: ${{ outputs.get-tags.ALPINE_TAG }}-${{ outputs.get-tags.REF_VERSION}}
+    
+    - uses: docker/build-push-action@v1
+    - name: centos_build
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: adedapomola/ansible-iac
+        path: build
+        dockerfile: build/Dockerfile-Centos8
+        tag_with_ref: true
+        tag_with_sha: true
+        tags: ${{ outputs.get-tags.CENTOS_TAG }}-${{ outputs.get-tags.REF_VERSION}}
