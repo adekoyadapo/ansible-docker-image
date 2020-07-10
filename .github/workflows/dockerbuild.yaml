@@ -2,12 +2,12 @@ name: Docker Ansible Image CI
 on:
   push:
     branches: 
-      - dev
+      - master
     paths:
     - 'Dockerfile**'
   pull:
     branches: 
-      - dev
+      - master
     paths:
     - 'Dockerfile**'
 jobs:
@@ -16,38 +16,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: Get Tags for alpine
+    - name: Get Tags for image
       id: tags
       run: |
-        ls -al
-        echo ::set-output name=ALPINE_TAG::$(cat ./build/Dockerfile-Alpine3 | grep FROM | cut -d ":" -f2)
-        echo ::set-output name=CENTOS_TAG::$(cat ./build/Dockerfile-Centos8 | grep FROM | cut -d ":" -f2)
-        echo ::set-output name=TAG_VERSION::$(echo ${GITHUB_SHA::8})
+        echo ::set-output name=ALPINE_TAG::$(cat Dockerfile.Alpine3 | grep -oP '(?<=FROM )[^ ]*' | sed 's/://')
+        echo ::set-output name=CENTOS_TAG::$(cat Dockerfile.Centos8 | grep -oP '(?<=FROM )[^ ]*' | sed 's/://')
+        echo ::set-output name=ANSIBLE_VERSION::$(cat Dockerfile.Alpine3 | grep ANSIBLE_VERSION= | cut -d "=" -f2)
+        echo ::set-output name=TAG_VERSION::$(echo ${GITHUB_SHA::4})
     - name: Check outputs
       run: |
-        echo ${{ steps.tags.outputs.ALPINE_TAG }}-${{ steps.tags.outputs.TAG_VERSION }}
-        echo ${{ steps.tags.outputs.CENTOS_TAG }}-${{ steps.tags.outputs.TAG_VERSION }}
-      
-    - uses: docker/build-push-action@v1
-    - name: alpine_build
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: adedapomola/ansible-iac
-        path: build
-        dockerfile: build/Dockerfile-Alpine3
-        tag_with_ref: true
-        tag_with_sha: true
-        tags: ${{ outputs.get-tags.ALPINE_TAG }}-${{ outputs.get-tags.REF_VERSION}}
+        echo ${{ steps.tags.outputs.ALPINE_TAG }}-${{ steps.tags.outputs.ANSIBLE_VERSION }}-${{ steps.tags.outputs.TAG_VERSION }}
+        echo ${{ steps.tags.outputs.CENTOS_TAG }}-${{ steps.tags.outputs.ANSIBLE_VERSION }}-${{ steps.tags.outputs.TAG_VERSION }}
     
     - uses: docker/build-push-action@v1
-    - name: centos_build
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: adedapomola/ansible-iac
-        path: build
-        dockerfile: build/Dockerfile-Centos8
-        tag_with_ref: true
-        tag_with_sha: true
-        tags: ${{ outputs.get-tags.CENTOS_TAG }}-${{ outputs.get-tags.REF_VERSION}}
+        password: ${{ secrets.DOCKER_TOKEN }}
+        repository: aade/ansible-iac
+        path: .
+        dockerfile: ./Dockerfile.Centos8
+        tags: ${{ steps.tags.outputs.CENTOS_TAG }}-${{ steps.tags.outputs.ANSIBLE_VERSION }}-${{ steps.tags.outputs.TAG_VERSION }}, latest
+  
+    - uses: docker/build-push-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+        repository: aade/ansible-iac
+        path: .
+        dockerfile: ./Dockerfile.Alpine3
+        tags: ${{ steps.tags.outputs.ALPINE_TAG }}-${{ steps.tags.outputs.ANSIBLE_VERSION }}-${{ steps.tags.outputs.TAG_VERSION }}

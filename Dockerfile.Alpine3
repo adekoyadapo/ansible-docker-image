@@ -4,9 +4,9 @@ ARG ANSIBLE_LINT_VERSION=4.2.0
 
 # Metadata Params
 LABEL maintainer="Adekoya Ade <adekoyadapo@gmail.com>"\
-      org.label-schema.url="https://github.com/adekoyadapo/iac-ansible/blob/master/README.md" \
+      org.label-schema.url="https://github.com/adekoyadapo/iac-docker-image/blob/master/README.md" \
       org.label-schema.version=${ANSIBLE_VERSION} \
-      org.label-schema.vcs-url="https://github.com/adekoyadapo/iac-ansible.git" \
+      org.label-schema.vcs-url="https://github.com/adekoyadapo/iac-docker-image.git" \
       org.label-schema.docker.dockerfile="/Dockerfile" \
       org.label-schema.description="Ansible in docker image for config management" \
       org.label-schema.schema-version="1.0"
