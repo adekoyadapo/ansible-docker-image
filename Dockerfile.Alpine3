@@ -1,0 +1,53 @@
+FROM alpine:3.11
+ARG ANSIBLE_VERSION=2.9.4
+ARG ANSIBLE_LINT_VERSION=4.2.0
+
+# Metadata Params
+LABEL maintainer="Adekoya Ade <adekoyadapo@gmail.com>"\
+      org.label-schema.url="https://github.com/adekoyadapo/iac-docker-image/blob/master/README.md" \
+      org.label-schema.version=${ANSIBLE_VERSION} \
+      org.label-schema.vcs-url="https://github.com/adekoyadapo/iac-docker-image.git" \
+      org.label-schema.docker.dockerfile="/Dockerfile" \
+      org.label-schema.description="Ansible in docker image for config management" \
+      org.label-schema.schema-version="1.0"
+
+# Environment and pip requirements
+ENV container=docker
+ENV pip_packages "ansible==${ANSIBLE_VERSION} ansible-lint==${ANSIBLE_LINT_VERSION} pyvmomi==7.0 docker==4.2.2 docker-compose==1.26.2 boto3==1.14.16 boto==2.49.0 cryptography==2.9.2 ansible[azure] apache-libcloud==3.1.0"
+
+RUN apk --update --no-cache add \
+        ca-certificates \
+        git \
+        openssh-client \
+        openssl \
+        python3\
+        rsync \
+        sshpass \
+        gcc
+
+RUN apk --update add --virtual \
+        .build-deps \
+        python3-dev \
+        libffi-dev \
+        openssl-dev \
+        build-base \
+ && pip3 install --upgrade \
+        pip \
+        cffi \
+ && pip3 install $pip_packages \
+ && apk del \
+        .build-deps \
+ && rm -rf /var/cache/apk/* \
+    && mkdir -p /etc/ansible \
+    && echo -e '[local]\nlocalhost ansible_connection=local' > /etc/ansible/hosts \
+    && echo -e """\
+\n\
+Host *\n\
+    StrictHostKeyChecking no\n\
+    UserKnownHostsFile=/dev/null\n\
+""" >> /etc/ssh/ssh_config
+
+WORKDIR /ansible
+
+# default command: display Ansible version
+CMD [ "ansible-playbook", "--version" ]
